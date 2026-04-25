@@ -6,6 +6,8 @@ This file aligns Orchestrator-generated markdown with [Rules.md](Rules.md).
 
 Apply this checklist whenever Orchestrator creates or updates markdown files in this workspace, including wiki context logs.
 
+Prompt intake policy is also in scope for markdown artifacts: when a user request is transformed into an execution-ready prompt, explicitly note that prompt normalization was performed via `prompt-optimizer` guidance.
+
 ## Alignment Checklist
 
 1. Heading levels increment by one only.
@@ -48,6 +50,7 @@ Use this default profile when generating markdown:
 - Are unordered lists using one marker?
 - Is list indentation consistent and 2-space nested?
 - Are trailing spaces removed?
+- If this document records task intake or routing, does it state that prompt normalization happened before dispatch?
 
 ## Notes
 
