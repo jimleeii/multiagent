@@ -30,6 +30,17 @@ Document applied policy changes and outcomes.
 - Decision: keep
 - Related Entries: [[Behavior-Patterns#PAT-20260425-001]] [[Learning-Backlog#LRN-20260425-001]]
 
+### CHG-20260426-001
+
+- Date: 2026-04-26
+- Trigger Pattern: Need consistent capture of skills used per orchestration cycle for future reuse.
+- Change Applied: Added `Skill-Usage-Log.md`, wired it into Orchestrator logging rules, added `skills log` trigger, and updated wiki operating cycle/cadence.
+- Expected Effect: Improved reuse of proven skill combinations and clearer traceability for skill selection decisions.
+- Validation Window: Next 15 orchestration cycles.
+- Observed Result: Pending.
+- Decision: keep
+- Related Entries: [[Behavior-Patterns#PAT-20260425-001]] [[Learning-Backlog#LRN-20260425-001]]
+
 ## Validation Tracker
 
 Use this tracker to evaluate CHG-20260425-001 over the declared 10-cycle window.
@@ -46,7 +57,7 @@ Use this tracker to evaluate CHG-20260425-001 over the declared 10-cycle window.
 | Cycle | Date | Normalized Prompt Confirmed | Clarification Needed | Reroute Needed | Rework From Misinterpretation | Notes |
 |---|---|---|---|---|---|---|
 | 1 | 2026-04-25 | yes | no | no | no | Policy update cycle based on OBS-20260425-001 baseline. |
-| 2 | TBD | TBD | TBD | TBD | TBD |  |
+| 2 | 2026-04-25 | n/a | n/a | n/a | n/a | Checkpoint only; no new completed orchestration cycle logged yet. |
 | 3 | TBD | TBD | TBD | TBD | TBD |  |
 | 4 | TBD | TBD | TBD | TBD | TBD |  |
 | 5 | TBD | TBD | TBD | TBD | TBD |  |

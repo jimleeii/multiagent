@@ -6,6 +6,7 @@ Short, descriptive project memory across orchestration runs.
 
 - `context kickoff` -> Run daily startup review and log kickoff context.
 - `context sync` -> Log a short checkpoint context entry.
+- `skills log` -> Log skills used this cycle into Skill-Usage-Log with reuse note.
 - `context snapshot` -> Generate and log current status snapshot.
 - `context blocker` -> Log blocker-focused entry with unblock condition.
 - `context done` -> Log completion-focused entry.

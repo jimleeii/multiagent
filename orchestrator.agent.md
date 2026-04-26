@@ -363,6 +363,7 @@ Use the skills below as the default routing policy when dispatching tasks.
 - `prompt-optimizer` - Always use at request intake to translate user input into a precise, LLM-understandable prompt (advisory-only, does not execute tasks).
 - `karpathy-guidelines` - Keep changes minimal, explicit, and verifiable.
 - `proactive-recall` - Use for major decisions where past context can change outcomes.
+- `proactivity` - Use to anticipate and act on potential issues before they occur.
 - `dispatching-parallel-agents` - Use when 2+ independent tracks can run in parallel.
 - `subagent-driven-development` - Use when executing independent implementation tasks.
 - `verification-before-completion` - Required before claiming completion.
@@ -643,6 +644,7 @@ Track subagent behavior for every dispatched task and persist observations in wi
 - `wiki/orchestrator/Home.md`
 - `wiki/orchestrator/Project-Context-Log.md`
 - `wiki/orchestrator/Behavior-Log.md`
+- `wiki/orchestrator/Skill-Usage-Log.md`
 - `wiki/orchestrator/Behavior-Patterns.md`
 - `wiki/orchestrator/Learning-Backlog.md`
 - `wiki/orchestrator/Runbook.md`
@@ -668,6 +670,7 @@ Use these keywords/prompts to trigger context behaviors quickly.
 |---|---|---|
 | `context kickoff` | `day start`, `start today`, `daily kickoff` | Run Daily Startup Context Review, generate Today Context (3-7 bullets), append kickoff entry to `Project-Context-Log.md`. |
 | `context sync` | `sync context`, `checkpoint context` | Append a short checkpoint entry to `Project-Context-Log.md` for current progress and next action. |
+| `skills log` | `log skills`, `skill usage`, `skills used` | Append a skill usage entry to `Skill-Usage-Log.md` for the current cycle, including primary and conditional skills. |
 | `context snapshot` | `project snapshot`, `status snapshot` | Produce concise current-state summary and log it with stage `checkpoint`. |
 | `context blocker` | `log blocker`, `blocked context` | Append blocked entry with blocker, impact, and unblock condition. |
 | `context done` | `mark done`, `complete context` | Append completion entry including outcome and follow-up recommendation. |
@@ -700,6 +703,18 @@ For each dispatched subagent result, append a behavior entry to `wiki/orchestrat
 
 Do not log secrets, access tokens, credentials, or personal data.
 
+Also append one skill-usage entry to `wiki/orchestrator/Skill-Usage-Log.md` for each orchestration cycle.
+Skill-usage entry requirements:
+- Entry ID (`SKL-YYYYMMDD-XXX`)
+- Timestamp (UTC)
+- Request type
+- Routing path (`direct` | `single-agent` | `multi-agent`)
+- Subagent(s)
+- Skills used (ordered by invocation)
+- Invocation reason (one sentence)
+- Outcome impact (`positive` | `neutral` | `negative`)
+- Reuse note (what to reuse next time)
+
 Also append a project context entry to `wiki/orchestrator/Project-Context-Log.md` after each orchestration cycle.
 Context entries must be short and descriptive:
 - Max 7 bullets
@@ -725,6 +740,7 @@ After each orchestration cycle:
 ### Review Cadence
 
 - Pattern compaction: every 10 new behavior observations, consolidate duplicate signals into a single pattern entry and link all evidence.
+- Skill usage compaction: every 15 new `Skill-Usage-Log.md` entries, summarize recurring high-value skill combinations in `Behavior-Patterns.md`.
 - Backlog triage: at least once every 7 days, re-prioritize `Learning-Backlog.md`, close stale items, and mark blocked items with explicit unblock conditions.
 - Runbook checkpoint: after each triage cycle, append a short checkpoint entry in `Runbook.md` summarizing changes and expected impact.
 - Daily context kickoff: once per day before first task, run the Daily Startup Context Review and log a kickoff note in `Project-Context-Log.md`.
