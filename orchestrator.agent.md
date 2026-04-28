@@ -460,11 +460,11 @@ Preferred escalation path:
 |---|---|---|
 | Ambiguous feature request, scope unclear | Software Architect | `brainstorming`, `writing-plans`, `planning-with-files` |
 | Architecture/design decision with trade-offs | Software Architect | `proactive-recall`, `microsoft-code-reference`, `karpathy-guidelines` |
-| .NET implementation task | Senior Developer | `test-driven-development`, `writing-csharp-code`, `dotnet-csharp-async-patterns` |
+| .NET implementation task | Senior Developer | `test-driven-development`, `writing-csharp-code`, `dotnet-csharp-async-patterns` — enforce `rules/Code-Commenting-And-Regions.md` |
 | Frontend UI implementation task | Senior Developer | `frontend-design`, `ui-ux-pro-max`, `test-driven-development` |
 | Runtime bug or test failure | Senior Developer | `systematic-debugging`, `test-driven-development`, `verification-before-completion` |
 | Security-focused review or hardening | Code Reviewer | `top-100-web-vulnerabilities-reference`, `requesting-code-review`, `verification-before-completion` |
-| Final quality gate before integration | Code Reviewer | `requesting-code-review`, `reviewing-dotnet-code`, `verification-before-completion` |
+| Final quality gate before integration | Code Reviewer | `requesting-code-review`, `reviewing-dotnet-code`, `verification-before-completion` — audit `rules/Code-Commenting-And-Regions.md` |
 
 ## Decision Logic
 
@@ -575,6 +575,22 @@ If classification is unclear, ask focused clarifying questions before dispatchin
 - DO NOT dispatch agents for simple tasks that don't require specialization
 - ONLY use these three agents for delegation—this is your restricted agent set
 - DO NOT accept "check logs" as a user-visible error message — always surface actionable error details
+
+### Code Commenting and Region Standards (Workspace Rules)
+
+All C# code produced or reviewed in this workspace must comply with `rules/Code-Commenting-And-Regions.md`.
+
+Enforcement points:
+
+- **Senior Developer** — Apply the commenting and region rules during implementation. Include a
+  "Commenting and Region compliance" line in the implementation summary confirming all checklist
+  items were satisfied.
+- **Code Reviewer** — Audit every changed `.cs` file against the compliance checklist in
+  `rules/Code-Commenting-And-Regions.md`. Report any violation as a finding with severity
+  `Medium` or higher. A missing XML doc on a public member is `High`. A missing region label or
+  wrong region order is `Medium`.
+- Do not accept implementation output that omits required XML doc comments on public members.
+- Do not accept implementation output that skips `#region` structure in classes with 5 or more members.
 
 ### Markdown Alignment (Workspace Rules)
 
@@ -782,6 +798,7 @@ Required artifacts:
 - Test evidence (what was run, what passed/failed, and gaps)
 - Error handling and rollback/guardrail notes
 - Known limitations and follow-up actions
+- Commenting and Region compliance statement (confirm `rules/Code-Commenting-And-Regions.md` checklist satisfied for all changed `.cs` files)
 
 ### Code Reviewer Contract
 
@@ -791,6 +808,7 @@ Required artifacts:
 - Regression/security/performance risk assessment
 - Ship recommendation (`ship`, `ship-with-followups`, or `do-not-ship`)
 - Required fixes vs optional improvements
+- Commenting and Region audit result: confirm compliance with `rules/Code-Commenting-And-Regions.md` or list violations with severity and file location
 
 ### Acceptance Gate Before Synthesis
 
@@ -809,8 +827,8 @@ Score each required artifact with:
 
 Per-subagent scoring:
 - Software Architect: 6 artifacts, max score 12
-- Senior Developer: 5 artifacts, max score 10
-- Code Reviewer: 5 artifacts, max score 10
+- Senior Developer: 6 artifacts, max score 12
+- Code Reviewer: 6 artifacts, max score 12
 
 Decision thresholds:
 - `Pass`: no artifact scored 0 and total score >= 80% of max
