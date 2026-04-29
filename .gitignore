@@ -1,0 +1,74 @@
+# Build outputs
+/bin/
+/obj/
+
+# Visual Studio temporary files, build results, and
+# user-specific files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.env
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Packages
+*.nupkg
+*.snupkg
+
+# Test output
+TestResults/
+
+# NuGet
+*.nupkg
+.nuget/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage
+coverage/
+coverage*.xml
+
+# Local JetBrains caches
+.idea/
+
+# Ignore local wiki build artifacts (if any)
+.wiki/
+
+# Ignore secrets file (if used)
+secrets.json
+
+# Ignore editors backup
+*~
+*.swp
+
+wiki/
+
+AGENTS.md

@@ -13,6 +13,6 @@ Actionable improvements derived from behavior patterns.
 - Safety Check:
 - Owner: Orchestrator
 - Status: pending | in_progress | done | rolled_back
-- Linked Pattern: [[Behavior-Patterns#PAT-YYYYMMDD-XXX]]
+- Linked Pattern: [Behavior-Patterns](Behavior-Patterns.md#pat-yyyymmdd-xxx)
 
 ---

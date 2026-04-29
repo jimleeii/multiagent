@@ -12,27 +12,27 @@ Prompt intake policy is also in scope for markdown artifacts: when a user reques
 
 1. Heading levels increment by one only.
 
-    - Good: `#` -> `##` -> `###`
-    - Avoid: `#` -> `###`
+  - Good: `#` -> `##` -> `###`
+  - Avoid: `#` -> `###`
 
 2. Use one heading style consistently.
 
-    - Prefer ATX headings (`#`, `##`, `###`).
-    - Do not mix setext (`===`, `---`) with ATX in the same file.
+  - Prefer ATX headings (`#`, `##`, `###`).
+  - Do not mix setext (`===`, `---`) with ATX in the same file.
 
 3. Use one unordered list marker consistently.
 
-    - Prefer dash marker (`-`) across the file.
+  - Prefer dash marker (`-`) across the file.
 
 4. Keep list indentation consistent.
 
-    - Same nesting level must align to the same column.
+  - Same nesting level must align to the same column.
 
 5. Use 2-space indentation for nested unordered lists.
 
 6. Avoid trailing spaces.
 
-    - No unnecessary spaces at line ends.
+  - No unnecessary spaces at line ends.
 
 ## Writing Profile for Orchestrator
 

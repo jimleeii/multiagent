@@ -14,6 +14,6 @@ Recurring behavior signatures and what they indicate.
 - Proposed Policy Change:
 - Status: candidate | applied | rolled_back
 - Compaction Batch: CB-YYYYMMDD-XX
-- Evidence: [[Behavior-Log#OBS-YYYYMMDD-XXX]]
+- Evidence: [Behavior-Log](Behavior-Log.md#obs-yyyymmdd-xxx)
 
 ---

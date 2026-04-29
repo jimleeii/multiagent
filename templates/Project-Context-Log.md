@@ -25,7 +25,8 @@ Short, descriptive project memory across orchestration runs.
   - In Progress:
   - Blockers/Risks:
   - Next Action:
-- Related: [[Behavior-Log#OBS-YYYYMMDD-XXX]] [[Learning-Backlog#LRN-YYYYMMDD-XXX]] [[Runbook#CHG-YYYYMMDD-XXX]]
+- Routing/Policy Changes: mode_change=<yes|no> | override=<yes|no> | fallback=<yes|no>
+- Related: [Behavior-Log](Behavior-Log.md#obs-yyyymmdd-xxx), [Learning-Backlog](Learning-Backlog.md#lrn-yyyymmdd-xxx), [Runbook](Runbook.md#chg-yyyymmdd-xxx)
 
 Rules:
 
@@ -33,17 +34,3 @@ Rules:
 - Max 7 bullets in Summary.
 - One sentence per bullet.
 - No secrets or sensitive data.
-
-### CTX-20260429-001
-
-- Timestamp (UTC): 2026-04-29
-- Project/Request: Workspace scaffold initialization
-- Stage: checkpoint
-- Summary:
-  - Completed: Created AGENTS.md at workspace root.
-  - Completed: Created wiki/orchestrator folder.
-  - Completed: Created Home.md, Project-Context-Log.md, Behavior-Log.md, Skill-Usage-Log.md, Behavior-Patterns.md, Learning-Backlog.md, and Runbook.md in wiki/orchestrator.
-  - In Progress: None.
-  - Blockers/Risks: None.
-  - Next Action: Continue orchestration using the initialized wiki and logging structure.
-- Related: [[Runbook#CHG-20260429-001]]

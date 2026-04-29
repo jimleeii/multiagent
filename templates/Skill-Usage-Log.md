@@ -14,6 +14,6 @@ Track which skills were used per orchestration cycle and what should be reused l
 - Invocation Reason:
 - Outcome Impact: positive | neutral | negative
 - Reuse Note:
-- Related: [[Behavior-Log#OBS-YYYYMMDD-XXX]] [[Behavior-Patterns#PAT-YYYYMMDD-XXX]] [[Learning-Backlog#LRN-YYYYMMDD-XXX]]
+- Related: [Behavior-Log](Behavior-Log.md#obs-yyyymmdd-xxx), [Behavior-Patterns](Behavior-Patterns.md#pat-yyyymmdd-xxx), [Learning-Backlog](Learning-Backlog.md#lrn-yyyymmdd-xxx)
 
 ---
