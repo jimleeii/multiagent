@@ -41,7 +41,6 @@ env/
 TestResults/
 
 # NuGet
-*.nupkg
 .nuget/
 
 # OS files
@@ -56,9 +55,6 @@ Thumbs.db
 coverage/
 coverage*.xml
 
-# Local JetBrains caches
-.idea/
-
 # Ignore local wiki build artifacts (if any)
 .wiki/
 
@@ -68,7 +64,3 @@ secrets.json
 # Ignore editors backup
 *~
 *.swp
-
-wiki/
-
-AGENTS.md
