@@ -1,6 +1,7 @@
-# Orchestrator Integration Reference
+# Orchestrator Integration Examples
 
-Complete examples of invoking the orchestrator from different contexts.
+This guide contains executable invocation examples for CLI, Python, HTTP, and agent tool wiring.
+For deployment policy, tuning, and operational checks, see [deployment.md](deployment.md).
 
 ## 1. Command-Line Interface (CLI)
 
@@ -422,68 +423,12 @@ class OrchestratorWithCache:
         return result
 ```
 
-## Provider Selection Guide
+## Operational Notes
 
-| Provider | Use Case | Setup |
-|----------|----------|-------|
-| **Mock** | Testing, local dev | No setup needed |
-| **Claude** | Production with Anthropic | `export ANTHROPIC_API_KEY=...` |
-| **Copilot** | GitHub Copilot backend | `--copilot-url http://...` |
-| **HTTP** | Self-hosted, third-party | `--http-endpoint http://...` |
-
-## Environment Setup
-
-```bash
-# For Claude
-export ANTHROPIC_API_KEY=sk-ant-...
-pip install anthropic aiohttp
-
-# For Copilot (requires aiohttp)
-pip install aiohttp
-
-# Run CLI
-python -m orchestrator.cli --provider claude --workflow architect-developer-reviewer --architect-prompt "Design X" --output json
-```
-
-## Error Handling and Timeouts
-
-### Graceful degradation
-
-```python
-result = await runtime.run_architect_developer_reviewer(...)
-
-# Check which stages failed
-if not result.ok:
-    if "architect" in result.failed_stages:
-        print("Architecture stage failed; using fallback design")
-    
-    if "developer" in result.failed_stages:
-        print("Development stage failed; using template implementation")
-    
-    if "reviewer" in result.failed_stages:
-        print("Review skipped; shipping with warnings")
-    
-    print(f"Partial result: {result.results}")
-```
-
-### Timeout handling
-
-```python
-import asyncio
-
-try:
-    result = await asyncio.wait_for(
-        runtime.run_architect_developer_reviewer(...),
-        timeout=60  # 60 second hard timeout
-    )
-except asyncio.TimeoutError:
-    print("Workflow exceeded 60s timeout; check provider health")
-    # Fallback to mock provider
-    fallback_provider = MockProvider()
-    runtime = OrchestratorRuntime(fallback_provider)
-    result = await runtime.run_architect_developer_reviewer(...)
-```
+- Provider selection, environment setup, and timeout tuning are documented in [deployment.md](deployment.md).
+- The runtime already supports partial results and retry/circuit-breaker behavior through `DispatchConfig`.
+- Prefer these examples when you need implementation wiring; prefer deployment guidance for production operations.
 
 ---
 
-**See [../README.md](../README.md), [deployment.md](deployment.md), and [Orchestrator.Agent.md](../../Orchestrator.Agent.md) for more details.**
+**See [../../README.md](../../README.md), [deployment.md](deployment.md), and [Orchestrator.Agent.md](../../Orchestrator.Agent.md) for more details.**

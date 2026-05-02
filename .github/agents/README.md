@@ -1,22 +1,21 @@
 # .github/agents
 
-This directory hosts the Python runtime package used by the orchestrator workflow and supporting assets.
+This directory contains the orchestrator agent definition, Python runtime, and governance assets.
 
 ## Structure
 
 ```
 .github/agents/
-├── Orchestrator.Agent.md              ← Main orchestrator agent definition
-├── orchestrator/                        ← Python runtime package
+├── Orchestrator.Agent.md              ← Primary orchestrator contract
+├── orchestrator/                      ← Python runtime package
 │   ├── __init__.py
-│   ├── runtime.py                       ← Core OrchestratorRuntime
-│   ├── providers.py                     ← Provider adapters
-│   └── cli.py                           ← Command-line entry point
-├── internal/                            ← Supporting internal docs
+│   ├── runtime.py                     ← Core orchestration runtime
+│   ├── providers.py                   ← Backend provider adapters
+│   └── cli.py                         ← CLI entry point
+├── internal/                          ← Maintainer-focused docs
 │   ├── docs/
 │   │   ├── deployment.md
 │   │   └── integration-examples.md
-│   └── README.md
 ├── rules/
 └── templates/
 ```
@@ -29,7 +28,7 @@ This directory hosts the Python runtime package used by the orchestrator workflo
 pip install anthropic aiohttp
 ```
 
-2. Run the orchestrator CLI.
+2. Run the workflow via CLI.
 
 ```bash
 cd .github/agents
@@ -40,9 +39,15 @@ python -m orchestrator.cli \
   --output json
 ```
 
-3. Read implementation details.
+3. Use the documentation map.
 
 - Orchestrator agent definition: [Orchestrator.Agent.md](Orchestrator.Agent.md)
-- Internal deployment guide: [internal/docs/deployment.md](internal/docs/deployment.md)
-- Internal integration examples: [internal/docs/integration-examples.md](internal/docs/integration-examples.md)
-- Internal structure notes: [internal/README.md](internal/README.md)
+- Deployment and operating model: [internal/docs/deployment.md](internal/docs/deployment.md)
+- End-to-end usage examples: [internal/docs/integration-examples.md](internal/docs/integration-examples.md)
+
+## What Lives Where
+
+- Use `Orchestrator.Agent.md` to manage orchestration policy, routing rules, and output contracts.
+- Use `orchestrator/` for executable behavior and provider integrations.
+- Use `internal/docs/deployment.md` for deployment topology, configuration, and run-time operations.
+- Use `internal/docs/integration-examples.md` for concrete invocation samples (CLI, Python, HTTP, and tool handlers).

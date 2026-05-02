@@ -1,345 +1,146 @@
-# Orchestrator Deployment and Integration Guide
+# Orchestrator Deployment Guide
 
-For end-to-end invocation patterns, see [ORCHESTRATOR_INTEGRATION_EXAMPLES.md](integration-examples.md).
+This document covers production deployment, runtime configuration, and operational checks.
+For runnable snippets and end-to-end invocations, see [integration-examples.md](integration-examples.md).
 
-## Structure
+## Purpose
 
-```
+- Define where each orchestrator artifact belongs.
+- Explain how the Orchestrator agent invokes Python runtime behavior.
+- Provide production defaults and troubleshooting guidance.
+
+## Workspace Layout
+
+```text
 .github/agents/
-├── Orchestrator.Agent.md            ← Main orchestrator definition
-├── internal/docs/deployment.md    ← This file
-├── orchestrator/                   ← Python package
+├── Orchestrator.Agent.md
+├── orchestrator/
 │   ├── __init__.py
-│   ├── runtime.py                  ← Core OrchestratorRuntime
-│   ├── providers.py                ← Provider adapters
-│   └── cli.py                      ← Command-line entry point
+│   ├── runtime.py
+│   ├── providers.py
+│   └── cli.py
+├── internal/docs/
+│   ├── deployment.md
+│   └── integration-examples.md
 ├── rules/
-│   ├── Code-Commenting-And-Regions.md
-│   ├── Orchestrator-Markdown-Alignment.md
-│   └── Rules.md
 └── templates/
-    ├── Home.md
-    ├── Project-Context-Log.md
-    └── ... (other templates)
 ```
 
-## How to invoke Python from the Agent
+## Invocation Model
 
-The Orchestrator.Agent.md is a markdown file defining the orchestration agent for VS Code / GitHub Copilot. It does NOT directly run Python. Instead, it uses tools to invoke Python scripts.
-
-### Option 1: Call CLI via `execute/runInTerminal` tool
-
-From the agent, use the `execute/runInTerminal` tool to run:
+`Orchestrator.Agent.md` is an orchestration policy file. It does not execute Python directly.
+Execution happens through tools that call the runtime package, typically with:
 
 ```bash
-cd <workspace_root>
-python -m orchestrator.cli \
-  --provider claude \
-  --api-key $ANTHROPIC_API_KEY \
-  --workflow architect-developer-reviewer \
-  --architect-prompt "Design a resilient cache." \
-  --output json
+python -m orchestrator.cli --provider <provider> --workflow architect-developer-reviewer --architect-prompt "<request>" --output json
 ```
 
-**In agent code (pseudo):**
+Supported invocation patterns:
 
-```python
-result = await runInTerminal({
-  "command": "cd $WORKSPACE && python -m orchestrator.cli --provider claude --api-key $KEY --workflow architect-developer-reviewer --architect-prompt 'Design X' --output json"
-})
-```
+- CLI call from agent tooling (`execute/runInTerminal`).
+- Direct Python import of `OrchestratorRuntime`.
+- HTTP wrapper service around `OrchestratorRuntime`.
 
-### Option 2: Embed Python directly in agent
+Detailed examples for all three patterns are in [integration-examples.md](integration-examples.md).
 
-If your agent runtime supports Python execution:
+## Provider Backends
 
-```python
-import asyncio
-from orchestrator import OrchestratorRuntime, MockProvider
+The runtime supports four provider adapters:
 
-async def run_workflow():
-    provider = MockProvider()
-    runtime = OrchestratorRuntime(provider)
-    result = await runtime.run_architect_developer_reviewer(
-        architect_prompt="Design X",
-        developer_prompt_builder=lambda arch: f"Implement: {arch.output}",
-        reviewer_prompt_builder=lambda arch, dev: f"Review: {dev.output}",
-    )
-    return result
-```
+- `MockProvider`: local development and tests.
+- `ClaudeProvider`: Anthropic-backed orchestration.
+- `CopilotProvider`: Copilot bridge endpoint.
+- `HttpProvider`: custom backend endpoint.
 
-### Option 3: HTTP bridge
+## Production Configuration
 
-If orchestrator is hosted as a service:
-
-```bash
-POST /api/workflow
-Body: {
-  "architect_prompt": "Design X",
-  "provider": "claude",
-  "model_map": {"architect": "claude-3-opus", ...}
-}
-Response: {
-  "ok": true,
-  "completed_stages": ["architect", "developer", "reviewer"],
-  "results": {...}
-}
-```
-
-## Provider Integration Patterns
-
-### Claude (Anthropic)
-
-**Setup:**
-
-```bash
-pip install anthropic aiohttp
-export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Usage via CLI:**
-
-```bash
-python -m orchestrator.cli \
-  --provider claude \
-  --model claude-3-opus-20240229 \
-  --workflow architect-developer-reviewer \
-  --architect-prompt "Design robust error handling for async tasks."
-```
-
-**Usage via code:**
-
-```python
-from orchestrator import OrchestratorRuntime, ClaudeProvider
-
-provider = ClaudeProvider(model="claude-3-opus-20240229")
-runtime = OrchestratorRuntime(provider=provider)
-result = await runtime.run_architect_developer_reviewer(...)
-```
-
-### GitHub Copilot
-
-**Setup:**
-
-Your Copilot service must expose an HTTP endpoint that accepts:
-
-```json
-POST /invoke
-{
-  "agent": "Software Architect",
-  "prompt": "Design X",
-  "model": "gpt-4"
-}
-```
-
-And returns:
-
-```json
-{
-  "output": "response text"
-}
-```
-
-**Usage via CLI:**
-
-```bash
-python -m orchestrator.cli \
-  --provider copilot \
-  --copilot-url http://your-copilot-service:3000 \
-  --workflow architect-developer-reviewer \
-  --architect-prompt "Design X"
-```
-
-**Usage via code:**
-
-```python
-from orchestrator import OrchestratorRuntime, CopilotProvider
-
-provider = CopilotProvider(base_url="http://localhost:3000")
-runtime = OrchestratorRuntime(provider=provider)
-result = await runtime.run_architect_developer_reviewer(...)
-```
-
-### Custom HTTP Backend
-
-Any LLM service (self-hosted, third-party) can be integrated:
-
-```bash
-python -m orchestrator.cli \
-  --provider http \
-  --http-endpoint http://your-llm-service/api/complete \
-  --workflow architect-developer-reviewer \
-  --architect-prompt "Design X"
-```
-
-## Integration with Orchestrator.Agent.md
-
-Update [Orchestrator.Agent.md](../../Orchestrator.Agent.md) to add execution guidance:
-
-**Example tool call in agent:**
-
-```markdown
-## Execution Methods
-
-### Via CLI (subprocess)
-
-The Orchestrator Python package exposes a CLI for programmatic access:
-
-\`\`\`bash
-python -m orchestrator.cli \\
-  --provider <claude|copilot|http|mock> \\
-  --workflow architect-developer-reviewer \\
-  --architect-prompt "<your prompt>" \\
-  --output json
-\`\`\`
-
-### Via Python (direct import)
-
-If the agent runtime supports Python:
-
-\`\`\`python
-from orchestrator import OrchestratorRuntime, ClaudeProvider
-
-provider = ClaudeProvider()
-runtime = OrchestratorRuntime(provider=provider)
-result = await runtime.run_architect_developer_reviewer(...)
-\`\`\`
-
-### Via HTTP (if hosted as service)
-
-POST /api/workflow with architect_prompt and provider config.
-```
-
-## Example Agent Integration Flow
-
-1. **User request enters Orchestrator.Agent**
-   - Agent parses request and creates architect prompt
-
-2. **Agent calls Python CLI**
-   ```bash
-   python -m orchestrator.cli \
-     --provider claude \
-     --architect-prompt "user_request_converted_to_prompt"
-   ```
-
-3. **CLI runs the 3-stage workflow**
-   - Stage 1: Architect designs solution
-   - Stage 2: Developer implements based on architect output
-   - Stage 3: Reviewer validates implementation
-
-4. **CLI returns JSON result**
-   ```json
-   {
-     "ok": true,
-     "completed_stages": ["architect", "developer", "reviewer"],
-     "results": { ... }
-   }
-   ```
-
-5. **Agent processes result and responds to user**
-
-## Deployment Topology
-
-### Local development
-
-- Provider: `MockProvider`
-- Storage: In-memory metrics
-- Monitoring: Optional HTTP server on port 9000
-
-```bash
-python -m orchestrator.cli --provider mock --workflow architect-developer-reviewer --architect-prompt "Test"
-```
-
-### CI/CD environment
-
-- Provider: `ClaudeProvider` or `CopilotProvider`
-- Storage: Metrics collected in logs
-- Monitoring: Parse logs or export to CI dashboard
-
-```bash
-# In CI script
-export ANTHROPIC_API_KEY=$SECRETS.ANTHROPIC_API_KEY
-python -m orchestrator.cli --provider claude --workflow ... --output json > result.json
-```
-
-### Production service
-
-- Provider: `ClaudeProvider` or custom HTTP bridge
-- Storage: Persist workflow results to database
-- Monitoring: Prometheus metrics endpoint or custom exporter
-
-```python
-# In Flask/FastAPI app
-@app.post("/api/workflow")
-async def run_workflow(req):
-    provider = ClaudeProvider()
-    runtime = OrchestratorRuntime(provider=provider)
-    result = await runtime.run_architect_developer_reviewer(...)
-    db.save_workflow(result)  # Persist
-    return result
-```
-
-## Configuration
-
-### Runtime config defaults
+Default runtime behavior is defined by `DispatchConfig`:
 
 ```python
 DispatchConfig(
-    timeout_seconds=45.0,              # Per-dispatch timeout
-    retries=1,                         # Retry attempts
-    backoff_seconds=0.75,              # Exponential backoff base
-    max_failures=3,                    # Circuit breaker threshold
-    circuit_reset_seconds=30.0,        # Circuit open duration
-    max_concurrency=4,                 # Semaphore bound
-    workflow_timeout_seconds=300.0,    # Total workflow budget
-    stage_transition_timeout_seconds=20.0, # Between stages
+    timeout_seconds=45.0,
+    retries=1,
+    backoff_seconds=0.75,
+    max_failures=3,
+    circuit_reset_seconds=30.0,
+    max_concurrency=4,
+    workflow_timeout_seconds=300.0,
+    stage_transition_timeout_seconds=20.0,
 )
 ```
 
-### Environment variables
+Tuning guidance:
+
+- Increase `timeout_seconds` for slow providers.
+- Increase `max_concurrency` only if provider rate limits allow it.
+- Increase `circuit_reset_seconds` when backend recovery is slow.
+
+## Environment Setup
 
 ```bash
-# Claude
+pip install anthropic aiohttp
 export ANTHROPIC_API_KEY=sk-ant-...
-
-# Copilot service
 export COPILOT_SERVICE_URL=http://localhost:3000
-
-# Custom HTTP backend
-export ORCHESTRATOR_ENDPOINT=http://your-llm-service/api
 ```
+
+## Deployment Profiles
+
+### Local Development
+
+- Provider: `mock`
+- Storage: in-memory runtime state
+- Monitoring: optional `/health` and `/metrics`
+
+### CI/CD
+
+- Provider: `claude` or `copilot`
+- Output: JSON artifact for pipeline decisions
+- Monitoring: log-based verification
+
+### Production Service
+
+- Provider: `claude` or `http`
+- Recommended: persist workflow outcomes and expose health/metrics
+- Recommended: alert on timeout and circuit-breaker rates
 
 ## Troubleshooting
 
-**ImportError: No module named 'anthropic'**
+### Missing dependencies
+
+Symptom: import errors for `anthropic` or `aiohttp`.
 
 ```bash
 pip install anthropic aiohttp
 ```
 
-**ConnectionRefusedError on Copilot provider**
+### Provider connection errors
 
-- Verify Copilot service is running at the URL
-- Check firewall and network connectivity
-- Run `curl http://copilot-url/health` to test
+- Confirm endpoint URL and credentials.
+- Validate network/firewall route.
+- Test provider health endpoint independently.
 
-**Workflow timeout**
+### Frequent workflow timeouts
 
-- Increase `workflow_timeout_seconds` in DispatchConfig
-- Or increase per-stage `timeout_seconds`
-- Check provider logs for slowness
+- Raise `timeout_seconds` and `workflow_timeout_seconds`.
+- Check provider latency and queue depth.
+- Reduce `max_concurrency` if backend is saturated.
 
-**Circuit breaker opens**
+### Circuit breaker frequently open
 
-- Provider is failing repeatedly; check its health
-- Increase `circuit_reset_seconds` if provider is recovering slowly
-- Or manually reset by creating a fresh `OrchestratorRuntime` instance
+- Inspect backend error rates.
+- Increase `circuit_reset_seconds` if recovery needs longer.
+- Restart runtime only after backend health is restored.
 
-## Next steps
+## Operational Checklist
 
-1. Create provider adapters for your specific LLM backend
-2. Integrate CLI calls into Orchestrator.Agent.md workflow
-3. Add persistent workflow storage (database)
-4. Expose monitoring endpoints (Prometheus, DataDog, etc.)
-5. Add fallback provider logic for high availability
-6. Implement SLO dashboards and alerting on timeout/circuit-breaker rates
+- Verify dependencies are installed.
+- Verify environment variables are set for selected provider.
+- Run a mock workflow smoke test before using external providers.
+- Confirm JSON output is parsed by the caller before rollout.
+- Confirm `/health` and `/metrics` are reachable when monitoring is enabled.
+
+## Related Files
+
+- Agent contract: [../../Orchestrator.Agent.md](../../Orchestrator.Agent.md)
+- Integration examples: [integration-examples.md](integration-examples.md)
+
