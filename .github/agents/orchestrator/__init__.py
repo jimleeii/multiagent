@@ -7,6 +7,7 @@ from .runtime import (
     Metrics,
     OrchestratorRuntime,
     SubagentProvider,
+    WikiLogReport,
     WorkflowResult,
     start_monitoring_server,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "DispatchConfig",
     "DispatchResult",
     "WorkflowResult",
+    "WikiLogReport",
     "SubagentProvider",
     "CircuitBreaker",
     "Metrics",

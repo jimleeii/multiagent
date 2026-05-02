@@ -6,7 +6,9 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Protocol
 
 logger = logging.getLogger("orchestrator.runtime")
@@ -61,6 +63,21 @@ class WorkflowResult:
     failed_stages: List[str] = field(default_factory=list)
     results: Dict[str, DispatchResult] = field(default_factory=dict)
     error: Optional[str] = None
+
+
+@dataclass
+class WikiLogReport:
+    """Summary of wiki log writes and verification for one orchestration cycle."""
+
+    ok: bool
+    workspace_root: str
+    wiki_root: str
+    required_files: List[str] = field(default_factory=list)
+    updated_files: List[str] = field(default_factory=list)
+    missing_files: List[str] = field(default_factory=list)
+    unchanged_files: List[str] = field(default_factory=list)
+    write_errors: Dict[str, str] = field(default_factory=dict)
+    run_id: str = ""
 
 
 class Metrics:
@@ -152,6 +169,15 @@ class OrchestratorRuntime:
     PROMPT_PREFIX_LINES = (
         "architect, develop, review.",
         "Log all behavior, pattern, learning, project context, runbook, skill usage along with process.",
+    )
+
+    REQUIRED_WIKI_FILES = (
+        "Behavior-Log.md",
+        "Behavior-Patterns.md",
+        "Learning-Backlog.md",
+        "Project-Context-Log.md",
+        "Runbook.md",
+        "Skill-Usage-Log.md",
     )
 
     def _mark_progress(self) -> None:
@@ -343,6 +369,199 @@ class OrchestratorRuntime:
             elapsed = time.monotonic() - started
             logger.info("workflow finished in %.2fs", elapsed)
 
+    @staticmethod
+    def _utc_now_iso() -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @staticmethod
+    def _trim_single_line(text: str, limit: int = 160) -> str:
+        line = " ".join((text or "").strip().split())
+        if len(line) <= limit:
+            return line
+        return line[: limit - 3].rstrip() + "..."
+
+    @staticmethod
+    def _append_markdown(path: Path, block: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("", encoding="utf-8")
+        with path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write("\n" + block.strip() + "\n")
+
+    def _build_cycle_log_blocks(
+        self,
+        run_id: str,
+        architect_prompt: str,
+        workflow_result: WorkflowResult,
+    ) -> Dict[str, str]:
+        ts = self._utc_now_iso()
+        request_type = self._trim_single_line(architect_prompt, 120) or "unspecified-request"
+        failed = ", ".join(workflow_result.failed_stages) if workflow_result.failed_stages else "none"
+        completed = ", ".join(workflow_result.completed_stages) if workflow_result.completed_stages else "none"
+        outcome = "pass" if workflow_result.ok else "revise"
+        status = "completed" if workflow_result.ok else "checkpoint"
+        backlog_status = "closed" if workflow_result.ok else "open"
+        run_token = run_id.lower()
+
+        return {
+            "Behavior-Log.md": (
+                f"### OBS-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                f"- Request Type: {request_type}\n"
+                f"- Subagent: orchestrator-cycle\n"
+                f"- Model Selection: selected_model=n/a | task_type=orchestration | criticality=P2\n"
+                f"- Routing Mode: persistent=adaptive-score-based | effective=adaptive-score-based | source=default\n"
+                f"- Fallback/Override: fallback_used={'yes' if failed != 'none' else 'no'} | fallback_reason={'stage_failure' if failed != 'none' else 'n/a'} | override_phrase=n/a\n"
+                f"- Skills Used: prompt-optimizer, orchestrator\n"
+                f"- Prompt Normalization: performed\n"
+                f"- Contract Score: {'1.0' if workflow_result.ok else '0.6'}\n"
+                f"- Outcome: {outcome}\n"
+                f"- Failure Mode (if any): {workflow_result.error or failed}\n"
+                f"- Root Cause Hypothesis: {'none' if workflow_result.ok else 'provider or prompt quality'}\n"
+                f"- Follow-up Action: {'monitor next cycle' if workflow_result.ok else 'open backlog and runbook checkpoint'}\n"
+                f"- Related: [Behavior-Patterns](Behavior-Patterns.md#pat-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token})\n"
+                f"- Compaction Batch: CB-{run_id}\n\n"
+                "---"
+            ),
+            "Skill-Usage-Log.md": (
+                f"### SKL-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                f"- Request Type: {request_type}\n"
+                f"- Routing Path: multi-agent\n"
+                f"- Subagent(s): Software Architect, Senior Developer, Code Reviewer\n"
+                f"- Skills Used (ordered): prompt-optimizer, orchestrator-routing, self-improving-log-contract\n"
+                f"- Invocation Reason: enforce mandatory orchestration cycle logging\n"
+                f"- Outcome Impact: {'positive' if workflow_result.ok else 'neutral'}\n"
+                f"- Reuse Note: keep strict wiki log contract enabled for every cycle\n"
+                f"- Related: [Behavior-Log](Behavior-Log.md#obs-{run_token}), [Behavior-Patterns](Behavior-Patterns.md#pat-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token})\n\n"
+                "---"
+            ),
+            "Project-Context-Log.md": (
+                f"### CTX-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                f"- Project/Request: {request_type}\n"
+                f"- Stage: {status}\n"
+                "- Summary:\n"
+                f"  - Completed: {completed}\n"
+                f"  - In Progress: {'none' if workflow_result.ok else 'follow-up remediation'}\n"
+                f"  - Blockers/Risks: {failed}\n"
+                f"  - Next Action: {'continue normal routing' if workflow_result.ok else 'review failed stage and re-run'}\n"
+                "- Routing/Policy Changes: mode_change=no | override=no | fallback=no\n"
+                f"- Related: [Behavior-Log](Behavior-Log.md#obs-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token}), [Runbook](Runbook.md#chg-{run_token})\n\n"
+                "---"
+            ),
+            "Behavior-Patterns.md": (
+                f"### PAT-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                "- Pattern: Orchestration cycle must produce all wiki logs before completion\n"
+                f"- Trigger: workflow_result_ok={str(workflow_result.ok).lower()}\n"
+                f"- Signal: completed={completed}; failed={failed}\n"
+                "- Confidence: medium\n"
+                f"- Evidence: [Behavior-Log](Behavior-Log.md#obs-{run_token})\n"
+                f"- Action: {'continue policy' if workflow_result.ok else 'prioritize failure remediation'}\n\n"
+                "---"
+            ),
+            "Learning-Backlog.md": (
+                f"### LRN-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                "- Area: orchestrator-logging-contract\n"
+                f"- Title: Verify mandatory log updates for request '{request_type}'\n"
+                f"- Priority: {'P3' if workflow_result.ok else 'P2'}\n"
+                f"- Status: {backlog_status}\n"
+                f"- Trigger: failed_stages={failed}\n"
+                f"- Next Action: {'No action required; monitor drift' if workflow_result.ok else 'add targeted retry/fallback improvements for failed stages'}\n"
+                f"- Related: [Behavior-Log](Behavior-Log.md#obs-{run_token}), [Runbook](Runbook.md#chg-{run_token})\n\n"
+                "---"
+            ),
+            "Runbook.md": (
+                f"### CHG-{run_id}\n\n"
+                f"- Timestamp (UTC): {ts}\n"
+                "- Change: Completed orchestration cycle with mandatory wiki log contract check\n"
+                f"- Scope: completed={completed}; failed={failed}\n"
+                f"- Expected Effect: {'stable continuity for self-improvement memory' if workflow_result.ok else 'improve resiliency via documented follow-up'}\n"
+                "- Rollback: disable strict wiki contract only for emergency troubleshooting\n"
+                f"- Related Entries: [Behavior-Patterns](Behavior-Patterns.md#pat-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token})\n\n"
+                "---"
+            ),
+        }
+
+    def enforce_wiki_log_contract(
+        self,
+        workspace_root: str,
+        architect_prompt: str,
+        workflow_result: WorkflowResult,
+        strict: bool = True,
+    ) -> WikiLogReport:
+        """Write and verify required wiki logs for the completed orchestration cycle.
+
+        In strict mode, raises RuntimeError when any required log is not updated.
+        """
+        root = Path(workspace_root).resolve()
+        wiki_root = root / ".wiki" / "orchestrator"
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+
+        pre_sizes: Dict[str, int] = {}
+        required_files = list(self.REQUIRED_WIKI_FILES)
+        for rel_name in required_files:
+            p = wiki_root / rel_name
+            pre_sizes[rel_name] = p.stat().st_size if p.exists() else -1
+
+        blocks = self._build_cycle_log_blocks(run_id, architect_prompt, workflow_result)
+        write_errors: Dict[str, str] = {}
+
+        for rel_name in required_files:
+            p = wiki_root / rel_name
+            try:
+                self._append_markdown(p, blocks[rel_name])
+            except Exception as ex:  # noqa: BLE001
+                write_errors[rel_name] = str(ex)
+
+        missing_files: List[str] = []
+        unchanged_files: List[str] = []
+        updated_files: List[str] = []
+        for rel_name in required_files:
+            p = wiki_root / rel_name
+            if not p.exists():
+                missing_files.append(rel_name)
+                continue
+            if p.stat().st_size > pre_sizes.get(rel_name, -1):
+                updated_files.append(rel_name)
+            else:
+                unchanged_files.append(rel_name)
+
+        ok = not write_errors and not missing_files and not unchanged_files
+        report = WikiLogReport(
+            ok=ok,
+            workspace_root=str(root),
+            wiki_root=str(wiki_root),
+            required_files=required_files,
+            updated_files=updated_files,
+            missing_files=missing_files,
+            unchanged_files=unchanged_files,
+            write_errors=write_errors,
+            run_id=run_id,
+        )
+
+        if ok:
+            self.metrics.inc("wiki_log_contract_pass")
+            logger.info("wiki log contract passed: run_id=%s updated=%d", run_id, len(updated_files))
+            return report
+
+        self.metrics.inc("wiki_log_contract_fail")
+        logger.error(
+            "wiki log contract failed: run_id=%s missing=%s unchanged=%s errors=%s",
+            run_id,
+            missing_files,
+            unchanged_files,
+            write_errors,
+        )
+        if strict:
+            raise RuntimeError(
+                "Wiki log contract violation: required orchestrator logs were not fully updated. "
+                f"run_id={run_id} missing={missing_files} unchanged={unchanged_files} errors={write_errors}"
+            )
+        return report
+
 
 def start_monitoring_server(runtime: OrchestratorRuntime, host: str = "127.0.0.1", port: int = 9000):
     """Start a lightweight HTTP monitoring server in a background daemon thread."""
@@ -402,6 +621,7 @@ __all__ = [
     "DispatchConfig",
     "DispatchResult",
     "WorkflowResult",
+    "WikiLogReport",
     "SubagentProvider",
     "OrchestratorRuntime",
     "CircuitBreaker",

@@ -29,6 +29,19 @@ python -m orchestrator.cli \
   --verbose
 ```
 
+### Local mock demo runner
+
+```bash
+# From repository root
+python .github/agents/orchestrator/demo_run.py --workspace-root .
+```
+
+This validates:
+
+- Architect -> Developer -> Reviewer orchestration path
+- Monitoring endpoints (`/health`, `/metrics`)
+- Mandatory `.wiki/orchestrator` log contract enforcement
+
 ### From Python subprocess
 
 ```python

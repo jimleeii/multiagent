@@ -36,8 +36,28 @@ python -m orchestrator.cli \
   --provider mock \
   --workflow architect-developer-reviewer \
   --architect-prompt "Design a resilient cache" \
+  --workspace-root ../.. \
   --output json
 ```
+
+## Iron Rule: Wiki Logs Must Be Updated
+
+The CLI now enforces a mandatory wiki log contract after each orchestration cycle.
+
+- Required files under `.wiki/orchestrator/` are always appended:
+  - `Behavior-Log.md`
+  - `Behavior-Patterns.md`
+  - `Learning-Backlog.md`
+  - `Project-Context-Log.md`
+  - `Runbook.md`
+  - `Skill-Usage-Log.md`
+- Default behavior is strict: if any required file is missing or not updated, the run fails.
+
+Flags:
+
+- `--workspace-root <path>`: points to the repository root containing `.wiki/orchestrator`.
+- `--wiki-strict` (default): fail run on any log-contract violation.
+- `--no-wiki-strict`: report violations without failing the run.
 
 3. Use the documentation map.
 

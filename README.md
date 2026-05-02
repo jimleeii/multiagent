@@ -14,7 +14,7 @@ A resilient Python orchestrator that prevents process halting between subagents 
 ## Run the demo
 
 ```powershell
-c:/Users/Wei_Li/AppData/Local/Programs/Python/Python313/python.exe run_orchestrator.py
+c:/Users/Wei_Li/AppData/Local/Programs/Python/Python313/python.exe .github/agents/orchestrator/demo_run.py
 ```
 
 Output shows:
