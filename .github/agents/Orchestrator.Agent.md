@@ -1071,5 +1071,7 @@ If any item fails, return `blocked` with the missing requirement and required co
 - Always use skill usage logging to track which skills are being used and their impact on outcomes.
 - Always execute following the rules for skill invocation, missing skill handling, and escalation when model constraints are not met.
 
-Simplified production default:
-- Prefer a single standard pipeline: normalize and augment -> route -> execute -> verify -> log.
+> ⚠️ [!IMPORTANT]
+>
+> **Simplified production default:**
+> - Prefer a single standard pipeline: *`normalize and augment -> route -> execute -> verify -> log`*.
