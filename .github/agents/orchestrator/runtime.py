@@ -180,6 +180,11 @@ class OrchestratorRuntime:
         "Skill-Usage-Log.md",
     )
 
+    ROUTING_STATE_FILE = Path(".wiki") / "orchestrator" / "state.json"
+    ALLOWED_PERSISTENT_MODES = {"adaptive-score-based", "strict-deterministic"}
+    ALLOWED_TIER_OVERRIDE_SCOPES = {"none", "one-run", "persistent"}
+    ROUTING_STATE_TEMPLATE_FILE = Path(".github") / "agents" / "templates" / "state.json"
+
     def _mark_progress(self) -> None:
         self._last_progress_ts = time.monotonic()
 
@@ -388,11 +393,104 @@ class OrchestratorRuntime:
         with path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write("\n" + block.strip() + "\n")
 
+    def _default_routing_state(self) -> Dict[str, Any]:
+        return {
+            "persistent_mode": "adaptive-score-based",
+            "effective_mode": "adaptive-score-based",
+            "mode_source": "default",
+            "tier_override_scope": "none",
+            "tier_override_active": False,
+            "updated_at_utc": self._utc_now_iso(),
+        }
+
+    def _sanitize_routing_state(self, raw_state: Dict[str, Any]) -> Dict[str, Any]:
+        state = self._default_routing_state()
+
+        persistent_mode = raw_state.get("persistent_mode")
+        if persistent_mode in self.ALLOWED_PERSISTENT_MODES:
+            state["persistent_mode"] = persistent_mode
+
+        effective_mode = raw_state.get("effective_mode")
+        if effective_mode in self.ALLOWED_PERSISTENT_MODES:
+            state["effective_mode"] = effective_mode
+        else:
+            state["effective_mode"] = state["persistent_mode"]
+
+        mode_source = raw_state.get("mode_source")
+        if isinstance(mode_source, str) and mode_source.strip():
+            state["mode_source"] = mode_source.strip()
+
+        override_scope = raw_state.get("tier_override_scope")
+        if override_scope in self.ALLOWED_TIER_OVERRIDE_SCOPES:
+            state["tier_override_scope"] = override_scope
+
+        override_active = raw_state.get("tier_override_active")
+        state["tier_override_active"] = bool(override_active)
+
+        updated_at = raw_state.get("updated_at_utc")
+        if isinstance(updated_at, str) and updated_at.strip():
+            state["updated_at_utc"] = updated_at.strip()
+
+        return state
+
+    def _load_routing_state(self, workspace_root: Path) -> Dict[str, Any]:
+        state_path = workspace_root / self.ROUTING_STATE_FILE
+        if not state_path.exists():
+            return self._default_routing_state()
+
+        try:
+            raw = json.loads(state_path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                logger.warning("routing state file is not an object; using defaults")
+                return self._default_routing_state()
+            return self._sanitize_routing_state(raw)
+        except Exception as ex:  # noqa: BLE001
+            logger.warning("failed to parse routing state file; using defaults: %s", ex)
+            return self._default_routing_state()
+
+    def _save_routing_state(self, workspace_root: Path, state: Dict[str, Any]) -> None:
+        state_path = workspace_root / self.ROUTING_STATE_FILE
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        sanitized = self._sanitize_routing_state(state)
+        sanitized["updated_at_utc"] = self._utc_now_iso()
+        state_path.write_text(json.dumps(sanitized, indent=2) + "\n", encoding="utf-8")
+
+    def initialize_workspace_state(self, workspace_root: str) -> Dict[str, Any]:
+        """Ensure canonical routing state exists before orchestration/logging cycles.
+
+        If the state file is missing, try seeding from the template under
+        .github/agents/templates/state.json. Fall back to defaults when template
+        is missing or invalid.
+        """
+        root = Path(workspace_root).resolve()
+        state_path = root / self.ROUTING_STATE_FILE
+        if state_path.exists():
+            state = self._load_routing_state(root)
+            self._save_routing_state(root, state)
+            return state
+
+        template_path = root / self.ROUTING_STATE_TEMPLATE_FILE
+        if template_path.exists():
+            try:
+                raw = json.loads(template_path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    state = self._sanitize_routing_state(raw)
+                    self._save_routing_state(root, state)
+                    return state
+                logger.warning("routing state template is not an object; using defaults")
+            except Exception as ex:  # noqa: BLE001
+                logger.warning("failed to parse routing state template; using defaults: %s", ex)
+
+        state = self._default_routing_state()
+        self._save_routing_state(root, state)
+        return state
+
     def _build_cycle_log_blocks(
         self,
         run_id: str,
         architect_prompt: str,
         workflow_result: WorkflowResult,
+        routing_state: Dict[str, Any],
     ) -> Dict[str, str]:
         ts = self._utc_now_iso()
         request_type = self._trim_single_line(architect_prompt, 120) or "unspecified-request"
@@ -402,6 +500,11 @@ class OrchestratorRuntime:
         status = "completed" if workflow_result.ok else "checkpoint"
         backlog_status = "closed" if workflow_result.ok else "open"
         run_token = run_id.lower()
+        persistent_mode = routing_state.get("persistent_mode", "adaptive-score-based")
+        effective_mode = routing_state.get("effective_mode", persistent_mode)
+        mode_source = routing_state.get("mode_source", "default")
+        tier_override_scope = routing_state.get("tier_override_scope", "none")
+        tier_override_active = str(bool(routing_state.get("tier_override_active", False))).lower()
 
         return {
             "Behavior-Log.md": (
@@ -410,8 +513,8 @@ class OrchestratorRuntime:
                 f"- Request Type: {request_type}\n"
                 f"- Subagent: orchestrator-cycle\n"
                 f"- Model Selection: selected_model=n/a | task_type=orchestration | criticality=P2\n"
-                f"- Routing Mode: persistent=adaptive-score-based | effective=adaptive-score-based | source=default\n"
-                f"- Fallback/Override: fallback_used={'yes' if failed != 'none' else 'no'} | fallback_reason={'stage_failure' if failed != 'none' else 'n/a'} | override_phrase=n/a\n"
+                f"- Routing Mode: persistent={persistent_mode} | effective={effective_mode} | source={mode_source}\n"
+                f"- Fallback/Override: fallback_used={'yes' if failed != 'none' else 'no'} | fallback_reason={'stage_failure' if failed != 'none' else 'n/a'} | override_scope={tier_override_scope} | override_active={tier_override_active} | override_phrase=n/a\n"
                 f"- Skills Used: prompt-optimizer, orchestrator\n"
                 f"- Prompt Normalization: performed\n"
                 f"- Contract Score: {'1.0' if workflow_result.ok else '0.6'}\n"
@@ -446,7 +549,7 @@ class OrchestratorRuntime:
                 f"  - In Progress: {'none' if workflow_result.ok else 'follow-up remediation'}\n"
                 f"  - Blockers/Risks: {failed}\n"
                 f"  - Next Action: {'continue normal routing' if workflow_result.ok else 'review failed stage and re-run'}\n"
-                "- Routing/Policy Changes: mode_change=no | override=no | fallback=no\n"
+                f"- Routing/Policy Changes: persistent_mode={persistent_mode} | effective_mode={effective_mode} | mode_source={mode_source} | override_scope={tier_override_scope} | override_active={tier_override_active}\n"
                 f"- Related: [Behavior-Log](Behavior-Log.md#obs-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token}), [Runbook](Runbook.md#chg-{run_token})\n\n"
                 "---"
             ),
@@ -478,6 +581,7 @@ class OrchestratorRuntime:
                 f"- Timestamp (UTC): {ts}\n"
                 "- Change: Completed orchestration cycle with mandatory wiki log contract check\n"
                 f"- Scope: completed={completed}; failed={failed}\n"
+                f"- Routing State: persistent_mode={persistent_mode}; effective_mode={effective_mode}; mode_source={mode_source}; tier_override_scope={tier_override_scope}; tier_override_active={tier_override_active}\n"
                 f"- Expected Effect: {'stable continuity for self-improvement memory' if workflow_result.ok else 'improve resiliency via documented follow-up'}\n"
                 "- Rollback: disable strict wiki contract only for emergency troubleshooting\n"
                 f"- Related Entries: [Behavior-Patterns](Behavior-Patterns.md#pat-{run_token}), [Learning-Backlog](Learning-Backlog.md#lrn-{run_token})\n\n"
@@ -499,6 +603,7 @@ class OrchestratorRuntime:
         root = Path(workspace_root).resolve()
         wiki_root = root / ".wiki" / "orchestrator"
         run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        routing_state = self.initialize_workspace_state(str(root))
 
         pre_sizes: Dict[str, int] = {}
         required_files = list(self.REQUIRED_WIKI_FILES)
@@ -506,7 +611,7 @@ class OrchestratorRuntime:
             p = wiki_root / rel_name
             pre_sizes[rel_name] = p.stat().st_size if p.exists() else -1
 
-        blocks = self._build_cycle_log_blocks(run_id, architect_prompt, workflow_result)
+        blocks = self._build_cycle_log_blocks(run_id, architect_prompt, workflow_result, routing_state)
         write_errors: Dict[str, str] = {}
 
         for rel_name in required_files:

@@ -1,0 +1,8 @@
+{
+  "persistent_mode": "adaptive-score-based",
+  "effective_mode": "adaptive-score-based",
+  "mode_source": "default",
+  "tier_override_scope": "none",
+  "tier_override_active": false,
+  "updated_at_utc": "1970-01-01T00:00:00Z"
+}

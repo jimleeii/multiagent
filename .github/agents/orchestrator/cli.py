@@ -145,6 +145,7 @@ def main():
 
     # Create runtime
     runtime = OrchestratorRuntime(provider=provider, config=config)
+    runtime.initialize_workspace_state(args.workspace_root)
 
     try:
         # Run workflow

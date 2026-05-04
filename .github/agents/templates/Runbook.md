@@ -2,6 +2,10 @@
 
 Document applied policy changes and outcomes.
 
+Routing mode state source of truth: `.wiki/orchestrator/state.json`.
+
+Runbook entries are audit evidence and must mirror state-changing events, but runbook content is not the canonical source for state reads.
+
 ## Change Record Template
 
 ### CHG-YYYYMMDD-XXX
