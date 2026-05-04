@@ -111,6 +111,12 @@ def main():
         action="store_false",
         help="Do not fail run on wiki log contract violation.",
     )
+    parser.add_argument(
+        "--logging-profile",
+        choices=["full", "light", "auto"],
+        default="full",
+        help="Wiki logging profile: full (default), light, or auto.",
+    )
 
     # Provider-specific args
     parser.add_argument("--api-key", help="API key (Claude/Copilot)")
@@ -162,6 +168,7 @@ def main():
             architect_prompt=args.architect_prompt,
             workflow_result=workflow_result,
             strict=args.wiki_strict,
+            logging_profile=args.logging_profile,
         )
         result = serialize_workflow_result(workflow_result)
         result["wiki_log_contract"] = {

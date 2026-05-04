@@ -103,3 +103,10 @@ This repository follows the AGENTS.md template recommendations and Karpathy beha
   - **Goal-driven:** define success criteria (how to verify) and loop until verified.
 
 Use this appendix as a quick reminder; keep the main sections above specific and actionable for agents. When in doubt, prefer short, tested commands and explicit verification steps.
+
+## Local References
+
+I have a WIKI styled local library in folder `C:\Users\wei_li.EDDYFINDT\Documents\Obsidian Vault\JAMES\wiki`. I use `index.md` as the entry point from folder `C:\Users\wei_li.EDDYFINDT\Documents\Obsidian Vault\JAMES`.
+
+- **Use** this reference when need to check on AI agent references.
+- **Do NOT use** this reference when minor changes are requested.

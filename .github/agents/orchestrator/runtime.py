@@ -180,6 +180,21 @@ class OrchestratorRuntime:
         "Skill-Usage-Log.md",
     )
 
+    LIGHT_WIKI_FILES = (
+        "Project-Context-Log.md",
+        "Runbook.md",
+        "Skill-Usage-Log.md",
+    )
+
+    LOW_RISK_DIRECT_ADMIN_PHRASES = {
+        "show model routing mode",
+        "force strict for this run",
+        "force strict until changed",
+        "return to adaptive",
+        "adaptive for this run",
+        "clear tier override",
+    }
+
     ROUTING_STATE_FILE = Path(".wiki") / "orchestrator" / "state.json"
     ALLOWED_PERSISTENT_MODES = {"adaptive-score-based", "strict-deterministic"}
     ALLOWED_TIER_OVERRIDE_SCOPES = {"none", "one-run", "persistent"}
@@ -485,6 +500,36 @@ class OrchestratorRuntime:
         self._save_routing_state(root, state)
         return state
 
+    @classmethod
+    def _is_low_risk_direct_admin_prompt(cls, prompt: str) -> bool:
+        normalized = " ".join((prompt or "").strip().lower().split())
+        return normalized in cls.LOW_RISK_DIRECT_ADMIN_PHRASES
+
+    def _resolve_required_wiki_files(
+        self,
+        logging_profile: str,
+        architect_prompt: str,
+        workflow_result: WorkflowResult,
+    ) -> List[str]:
+        profile = (logging_profile or "full").strip().lower()
+        if profile not in {"full", "light", "auto"}:
+            raise ValueError("logging_profile must be one of: full, light, auto")
+
+        if profile == "full":
+            return list(self.REQUIRED_WIKI_FILES)
+        if profile == "light":
+            return list(self.LIGHT_WIKI_FILES)
+
+        # auto profile: apply light logging only to direct low-risk admin commands.
+        is_direct_like = (
+            not workflow_result.completed_stages
+            and not workflow_result.failed_stages
+            and not workflow_result.results
+        )
+        if is_direct_like and self._is_low_risk_direct_admin_prompt(architect_prompt):
+            return list(self.LIGHT_WIKI_FILES)
+        return list(self.REQUIRED_WIKI_FILES)
+
     def _build_cycle_log_blocks(
         self,
         run_id: str,
@@ -595,6 +640,7 @@ class OrchestratorRuntime:
         architect_prompt: str,
         workflow_result: WorkflowResult,
         strict: bool = True,
+        logging_profile: str = "full",
     ) -> WikiLogReport:
         """Write and verify required wiki logs for the completed orchestration cycle.
 
@@ -606,7 +652,11 @@ class OrchestratorRuntime:
         routing_state = self.initialize_workspace_state(str(root))
 
         pre_sizes: Dict[str, int] = {}
-        required_files = list(self.REQUIRED_WIKI_FILES)
+        required_files = self._resolve_required_wiki_files(
+            logging_profile=logging_profile,
+            architect_prompt=architect_prompt,
+            workflow_result=workflow_result,
+        )
         for rel_name in required_files:
             p = wiki_root / rel_name
             pre_sizes[rel_name] = p.stat().st_size if p.exists() else -1

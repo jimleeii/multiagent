@@ -878,8 +878,33 @@ Track subagent behavior for every dispatched task and persist observations in wi
 
 Write coverage rules:
 - For every orchestration cycle, log behavior, patterns, learning backlog updates, project context, runbook checkpoint, and skill usage.
-- Direct-response cycles are not exempt; create compact but complete entries across all required wiki artifacts.
+- Direct-response cycles are not exempt; create compact but complete entries across required wiki artifacts, except for low-risk direct admin commands covered by the light logging profile.
 - Dispatched cycles require full detail and evidence-backed entries.
+
+### Logging Profiles
+
+Use explicit logging profiles to preserve observability while reducing noise for low-risk direct admin commands.
+
+- `full` profile (default): update all required wiki artifacts for the cycle.
+- `light` profile: update only:
+  - `.wiki/orchestrator/Project-Context-Log.md`
+  - `.wiki/orchestrator/Runbook.md`
+  - `.wiki/orchestrator/Skill-Usage-Log.md`
+- `auto` profile: use `light` only when the request is both:
+  - direct path with no dispatch stages, and
+  - one of these low-risk admin phrases:
+    - `show model routing mode`
+    - `force strict for this run`
+    - `force strict until changed`
+    - `return to adaptive`
+    - `adaptive for this run`
+    - `clear tier override`
+  - otherwise use `full`.
+
+Guardrails:
+- Never use `light` for dispatched workflows.
+- Never use `light` for override phrases that lower minimum-tier protections.
+- If profile selection is ambiguous, default to `full`.
 
 Mandatory lifecycle logging statement for each cycle:
 - `Log all behavior, pattern, learning, project context, runbook, skill usage along with process.`
@@ -1140,7 +1165,7 @@ If any item fails, return `blocked` with the missing requirement and required co
 
 ## Automation and Tool Use
 - Use templates for all structured outputs (model selection report, behavior logs, context logs) to ensure consistency.
-- Always execute behavior monitoring and wiki logging actions for all cycles, including direct cycles.
+- Always execute behavior monitoring and wiki logging actions for all cycles, including direct cycles, using `full`/`light`/`auto` profile rules.
 - Always use learning loop patterns to detect and log new behavior patterns, and to apply small, reversible improvements to orchestration policies.
 - Always use project context logging to capture the state of the project and guide future actions.
 - Always use skill usage logging to track which skills are being used and their impact on outcomes.
